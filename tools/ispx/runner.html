@@ -5,7 +5,10 @@
     <script src="/wasm_exec.js"></script>
     <script>
         "use strict";
-
+        window.CallJsPrintBool = (valFloat) =>{
+            console.log('====CallJsPrintBool valFloat =', valFloat);
+            return true
+        }
         (async () => {
             const go = new Go();
             const { instance } = await WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject)

@@ -11,14 +11,15 @@
 <body>
     <h1>WASM data loading test</h1>
     <iframe id="wasmFrame" src="runner.html"></iframe>
+    <button id="executeButton">Execute</button>
     <script>
         "use strict";
-
+        
         const zipResp = fetch('/test.zip')
 
         const iframe = document.getElementById('wasmFrame');
+        const wasmWindow = iframe.contentWindow;
         iframe.addEventListener('load', () => {
-            const wasmWindow = iframe.contentWindow;
             window.wasmWindow = wasmWindow;
             console.log('wasmWindow', wasmWindow);
 
@@ -27,6 +28,11 @@
                 console.log('buffer', buffer);
                 wasmWindow.startWithZipBuffer(buffer);
             });
+        });
+
+        const executeButton = document.getElementById('executeButton');
+        executeButton.addEventListener('click', () => {
+            wasmWindow.goPrintFloat(3.14159);
         });
     </script>
 </body>
