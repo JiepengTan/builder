@@ -2,8 +2,14 @@ import http.server
 import socketserver
 import webbrowser
 import os
+import sys
 
-PORT = 8004
+# Check if port is provided as command line argument
+if len(sys.argv) > 1:
+    PORT = int(sys.argv[1])
+else:
+    PORT = 8005  # Default port
+
 handler = http.server.SimpleHTTPRequestHandler
 
 with socketserver.TCPServer(("", PORT), handler) as httpd:
