@@ -1,7 +1,7 @@
 package main
 
 //go:generate qexp -outdir pkg github.com/goplus/spx
-//go:generate qexp -outdir pkg github.com/hajimehoshi/ebiten/v2
+//go:generate qexp -outdir pkg github.com/realdream-ai/gdspx
 
 import (
 	"archive/zip"
@@ -9,8 +9,9 @@ import (
 	"log"
 	"syscall/js"
 
+	_ "github.com/realdream-ai/gdspx/pkg/gdspx"
+
 	_ "github.com/goplus/builder/ispx/pkg/github.com/goplus/spx"
-	_ "github.com/goplus/builder/ispx/pkg/github.com/hajimehoshi/ebiten/v2"
 	"github.com/goplus/builder/ispx/zipfs"
 	"github.com/goplus/igop"
 	"github.com/goplus/igop/gopbuild"
@@ -34,9 +35,13 @@ func loadData(this js.Value, args []js.Value) interface{} {
 	return nil
 }
 
+func goWasmInit(this js.Value, args []js.Value) interface{} {
+	println("ispx goWasmInit ")
+	return js.ValueOf(nil)
+}
 func main() {
+	js.Global().Set("goWasmInit", js.FuncOf(goWasmInit))
 	js.Global().Set("goLoadData", js.FuncOf(loadData))
-
 	zipData := <-dataChannel
 
 	zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
