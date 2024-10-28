@@ -1,7 +1,8 @@
 package main
 
 //go:generate qexp -outdir pkg github.com/goplus/spx
-//go:generate qexp -outdir pkg github.com/realdream-ai/gdspx
+//go:generate qexp -outdir pkg github.com/realdream-ai/gdspx/pkg/gdspx
+//go:generate qexp -outdir pkg github.com/realdream-ai/gdspx/pkg/engine
 
 import (
 	"archive/zip"
