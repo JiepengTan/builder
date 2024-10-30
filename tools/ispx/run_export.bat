@@ -21,7 +21,7 @@ for /f "tokens=2" %%i in ('tasklist ^| findstr python') do taskkill /F /PID %%i
 
 :: Prepare files and run Python script
 cd .builds\export
-copy /Y ..\..\index.html .
+copy /Y ..\..\index_export.html index.html
 copy /Y ..\..\run.py .
 copy /Y ..\..\test.zip .
 
