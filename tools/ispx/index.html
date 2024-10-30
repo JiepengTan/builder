@@ -68,47 +68,51 @@
 		let setStatusMode;
 		let setStatusNotice;
 		let video_driver = '';
-
-		async function runGame() {
-			const zipResp = fetch('/game.zip')
-			const zipData = await (await (zipResp)).arrayBuffer()
-			console.log("Load data succ 3", zipData)
-			InstallAndRunGame(zipData);
-		};
-		function clearPersistence() { // eslint-disable-line no-unused-vars
-			function deleteDB(path) {
-				return new Promise(function (resolve, reject) {
-					const req = indexedDB.deleteDatabase(path);
-					req.onsuccess = function () {
-						resolve();
-					};
-					req.onerror = function (err) {
-						reject(err);
-					};
-					req.onblocked = function (err) {
-						reject(err);
-					};
-				});
-			}
-			if (!window.confirm('Are you sure you want to delete all the locally stored files?\nClicking "OK" will permanently remove your projects and editor settings!')) {
-				return;
-			}
-			Promise.all([
-				deleteDB('/home/web_user/Preload'),
-			]).then(function (results) {
-				alert('Done.');
-			}).catch(function (err) {
-				alert('Error deleting local files. Please retry after reloading the page.');
-			});
-		}
-
-
-
+		var editorExitCount = 0
+		const INDETERMINATE_STATUS_STEP_MS = 100;
+		const persistentPaths = ['/home/web_user'];
 		const tabs = [
 			document.getElementById('tab-loader'),
 			document.getElementById('tab-editor'),
 			document.getElementById('tab-game'),
 		];
+
+		let editorCanvas = document.getElementById('editor-canvas');
+		let gameCanvas = document.getElementById('game-canvas');
+
+		let initializing = true;
+		let statusMode = 'hidden';
+		let lastScale = 0;
+		let lastWidth = 0;
+		let lastHeight = 0;
+		let OnEditorExit = function () {
+			showTab('loader');
+		};
+		const editorConfig = {
+			'unloadAfterInit': false,
+			'canvas': editorCanvas,
+			'canvasResizePolicy': 0,
+			'onExit': function () {
+				editorExitCount++
+				editorCanvas = replaceCanvas(editorCanvas);
+				if (OnEditorExit) {
+					OnEditorExit();
+				}
+				if (editorExitCount == 2) {
+					console.log("Start game")
+					ExecuteGame()
+				}
+			},
+			'onExecute': ImportProject,
+			'persistentPaths': persistentPaths,
+		};
+		async function runGame() {
+			const zipResp = fetch('/game.zip')
+			const zipData = await (await (zipResp)).arrayBuffer()
+			console.log("Load data succ 4", zipData)
+			InstallAndRunGame(zipData);
+		};
+
 		function showTab(name) {
 			tabs.forEach(function (elem) {
 				if (elem.id === `tab-${name}`) {
@@ -123,31 +127,16 @@
 			});
 		}
 
-		var editorExitCount = 0
-		function InstallAndRunGame(zip) {
-			const INDETERMINATE_STATUS_STEP_MS = 100;
-			const persistentPaths = ['/home/web_user'];
-
-			let editorCanvas = document.getElementById('editor-canvas');
-			let gameCanvas = document.getElementById('game-canvas');
-
-			let initializing = true;
-			let statusMode = 'hidden';
-			showTab('status');
-			let lastScale = 0;
-			let lastWidth = 0;
-			let lastHeight = 0;
-
-			function replaceCanvas(from) {
-				const out = document.createElement('canvas');
-				out.id = from.id;
-				out.tabIndex = from.tabIndex;
-				from.parentNode.replaceChild(out, from);
-				lastScale = 0;
-				return out;
-			}
 
 
+		function ExecuteGame() {
+			args = [
+				"--path",
+				"/home/web_user/Preload",
+				"--editor-pid",
+				"0",
+				"res://main.tscn"
+			]
 			const gameConfig = {
 				'persistentPaths': persistentPaths,
 				'unloadAfterInit': false,
@@ -159,96 +148,67 @@
 					game = null;
 				},
 			};
-
-			let OnEditorExit = function () {
-				showTab('loader');
-			};
-			function ExecuteGame() {
-				args = [
-					"--path",
-					"/home/web_user/Preload",
-					"--editor-pid",
-					"0",
-					"res://main.tscn"
-				]
-				if (game) {
-					console.error('A game is already running. Close it first');
-					return;
-				}
-				gameCanvas = replaceCanvas(gameCanvas);
-				game = new Engine(gameConfig);
-				showTab('game');
-				game.init('godot.editor').then(function () {
-					requestAnimationFrame(function () {
-						game.start({ 'args': args, 'canvas': gameCanvas }).then(function () {
-							gameCanvas.focus();
-						});
+			if (game) {
+				console.error('A game is already running. Close it first');
+				return;
+			}
+			gameCanvas = replaceCanvas(gameCanvas);
+			game = new Engine(gameConfig);
+			showTab('game');
+			game.init('godot.editor').then(function () {
+				requestAnimationFrame(function () {
+					game.start({ 'args': args, 'canvas': gameCanvas }).then(function () {
+						gameCanvas.focus();
 					});
 				});
+			});
+		}
+		function ImportProject(args) {
+			// import projects
+			console.log("Execute ==== ", args)
+			const is_project_manager = args.filter(function (v) {
+				return v === '--project-manager';
+			}).length !== 0;
+			if (video_driver) {
+				args.push('--rendering-driver', video_driver);
 			}
-			function ImportProject(args) {
-				// import projects
-				console.log("Execute ==== ", args)
-				const is_project_manager = args.filter(function (v) {
-					return v === '--project-manager';
-				}).length !== 0;
+			OnEditorExit = function (code) {
+				editor.init().then(function () {
+					OnEditorExit = function () {
+						showTab('loader');
+					};
+					editor.start({ 'args': args, 'persistentDrops': is_project_manager, 'canvas': editorCanvas });
+				});
+				OnEditorExit = null;
+			};
+		}
+
+		function replaceCanvas(from) {
+			const out = document.createElement('canvas');
+			out.id = from.id;
+			out.tabIndex = from.tabIndex;
+			from.parentNode.replaceChild(out, from);
+			lastScale = 0;
+			return out;
+		}
+		function InstallAndRunGame(zip) {
+
+			showTab('status');
+			editor = new Engine(editorConfig);
+			editor.init('godot.editor').then(function () {
+				if (zip) {
+					editor.copyToFS('/tmp/preload.zip', zip);
+				}
+				showTab('editor');
+				const args = ['--project-manager', '--single-window'];
 				if (video_driver) {
 					args.push('--rendering-driver', video_driver);
 				}
-				OnEditorExit = function (code) {
-					editor.init().then(function () {
-						OnEditorExit = function () {
-							showTab('loader');
-						};
-						editor.start({ 'args': args, 'persistentDrops': is_project_manager, 'canvas': editorCanvas });
-					});
-					OnEditorExit = null;
-				};
-			}
-
-			const editorConfig = {
-				'unloadAfterInit': false,
-				'canvas': editorCanvas,
-				'canvasResizePolicy': 0,
-				'onExit': function () {
-					editorExitCount++
-					editorCanvas = replaceCanvas(editorCanvas);
-					if (OnEditorExit) {
-						OnEditorExit();
-					}
-					if (editorExitCount == 2) {
-						console.log("Start game")
-						ExecuteGame()
-					}
-				},
-				'onExecute': ImportProject,
-				'persistentPaths': persistentPaths,
-			};
-			editor = new Engine(editorConfig);
-			function displayFailureNotice(err) {
-				const msg = err.message || err;
-				console.error(msg);
-				initializing = false;
-			}
-
-			if (!Engine.isWebGLAvailable()) {
-				displayFailureNotice('WebGL not available');
-			} else {
-				editor.init('godot.editor').then(function () {
-					if (zip) {
-						editor.copyToFS('/tmp/preload.zip', zip);
-					}
-					showTab('editor');
-					const args = ['--project-manager', '--single-window'];
-					if (video_driver) {
-						args.push('--rendering-driver', video_driver);
-					}
-					editor.start({ 'args': args, 'persistentDrops': true }).then(function () {
-						setStatusMode('hidden');
-						initializing = false;
-					});
-				}).catch(displayFailureNotice);
-			}
+				editor.start({ 'args': args, 'persistentDrops': true }).then(function () {
+					setStatusMode('hidden');
+					initializing = false;
+				});
+			}).catch(null);
 		}
 	</script>
 </body>
