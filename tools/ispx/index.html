@@ -162,8 +162,12 @@
 			exitFunc = null
 			game = new Engine(gameConfig);
 			game.init('godot.editor').then(function () {
-				game.start({ 'args': args, 'canvas': gameCanvas }).then(function () {
+				game.start({ 'args': args, 'canvas': gameCanvas }).then(async () => {
 					gameCanvas.focus();
+					const zipResp = fetch('/test.zip')
+					const buffer = await (await (zipResp)).arrayBuffer()
+					console.log("Load Game data3", buffer)
+					window.goLoadData(new Uint8Array(buffer))
 				});
 			});
 		}
