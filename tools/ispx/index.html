@@ -36,6 +36,7 @@
 			</canvas>
 		</div>
 	</div>
+	<script src="godot.editor.js"></script>
 	<script>
 		window.addEventListener('load', () => {
 			if ('serviceWorker' in navigator) {
@@ -62,15 +63,18 @@
 			runGame();
 		});
 
-	</script>
-	<script src="godot.editor.js"></script>
-	<script>
 		let editor = null;
 		let game = null;
 		let setStatusMode;
 		let setStatusNotice;
 		let video_driver = '';
 
+		async function runGame() {
+			const zipResp = fetch('/game.zip')
+			const zipData = await (await (zipResp)).arrayBuffer()
+			console.log("Load data succ 3", zipData)
+			InstallAndRunGame(zipData);
+		};
 		function clearPersistence() { // eslint-disable-line no-unused-vars
 			function deleteDB(path) {
 				return new Promise(function (resolve, reject) {
@@ -234,12 +238,6 @@
 					if (zip) {
 						editor.copyToFS('/tmp/preload.zip', zip);
 					}
-					try {
-						// Avoid user creating project in the persistent root folder.
-						editor.copyToFS('/home/web_user/keep', new Uint8Array());
-					} catch (e) {
-						// File exists
-					}
 					showTab('editor');
 					const args = ['--project-manager', '--single-window'];
 					if (video_driver) {
@@ -252,12 +250,6 @@
 				}).catch(displayFailureNotice);
 			}
 		}
-		async function runGame() {
-			const zipResp = fetch('/game.zip')
-			const zipData = await (await (zipResp)).arrayBuffer()
-			console.log("Load data succ ", zipData)
-			InstallAndRunGame(zipData);
-		};
 	</script>
 </body>
 
