@@ -1,9 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        #canvas {
+            width: 800px;
+            height: 600px;
+            outline: none;
+            position: absolute;
+            top: 100px;
+            left: 200px;
+        }
+
         #canvas:focus {
             outline: none;
         }
@@ -11,13 +21,13 @@
 </head>
 
 <body>
-    <canvas id="canvas">
+    <canvas id="canvas" width="800" height="600">
         HTML5 canvas appears to be unsupported in the current browser.<br>
     </canvas>
     <script src="index.js"></script>
     <script>
         const GODOT_CONFIG = {
-            "args": [], "canvasResizePolicy": 2, "executable": "index",
+            "args": [], "canvasResizePolicy": 0, "executable": "index",
             "experimentalVK": false, "focusCanvas": true, "gdextensionLibs": []
         };
         const engine = new Engine(GODOT_CONFIG);
