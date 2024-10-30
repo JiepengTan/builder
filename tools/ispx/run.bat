@@ -19,7 +19,7 @@ for /f "tokens=2" %%i in ('tasklist ^| findstr python') do taskkill /F /PID %%i
 :: Runs your python script
 
 cd .builds
-copy ..\runner.html .
+copy ..\index.html .
 copy ..\run.py .
 copy ..\test.zip .
 copy ..\wasm_exec.js .

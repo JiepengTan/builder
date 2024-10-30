@@ -40,9 +40,30 @@ func goWasmInit(this js.Value, args []js.Value) interface{} {
 	println("ispx goWasmInit ")
 	return js.ValueOf(nil)
 }
+
+func gdspxOnEngineStart(this js.Value, args []js.Value) interface{} {
+	println("ispx gdspxOnEngineStart")
+	return nil
+}
+func gdspxOnEngineUpdate(this js.Value, args []js.Value) interface{} {
+	return nil
+}
+func gdspxOnEngineFixedUpdate(this js.Value, args []js.Value) interface{} {
+	return nil
+}
+func gdspxOnEngineDestroy(this js.Value, args []js.Value) interface{} {
+	println("ispx gdspxOnEngineDestroy")
+	return nil
+}
+
 func main() {
 	js.Global().Set("goWasmInit", js.FuncOf(goWasmInit))
 	js.Global().Set("goLoadData", js.FuncOf(loadData))
+
+	js.Global().Set("gdspx_on_engine_start", js.FuncOf(gdspxOnEngineStart))
+	js.Global().Set("gdspx_on_engine_update", js.FuncOf(gdspxOnEngineUpdate))
+	js.Global().Set("gdspx_on_engine_fixed_update", js.FuncOf(gdspxOnEngineFixedUpdate))
+	js.Global().Set("gdspx_on_engine_destroy", js.FuncOf(gdspxOnEngineDestroy))
 	zipData := <-dataChannel
 
 	zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
@@ -57,6 +78,9 @@ func main() {
 
 	var mode igop.Mode
 	ctx := igop.NewContext(mode)
+
+	// NOTE(everyone): Keep sync with the config in spx [gop.mod](https://github.com/goplus/spx/blob/main/gop.mod)
+	gopbuild.RegisterClassFileType(".spx", "Game", []*gopbuild.Class{{Ext: ".spx", Class: "SpriteImpl"}}, "github.com/goplus/spx")
 
 	// Register patch for spx to support functions with generic type like `Gopt_Game_Gopx_GetWidget`.
 	// See details in https://github.com/goplus/builder/issues/765#issuecomment-2313915805
@@ -85,7 +109,9 @@ func Gopt_Game_Gopx_GetWidget[T any](sg ShapeGetter, name string) *T {
 		log.Fatalln("Failed to build Go+ source:", err)
 	}
 
+	println("run Go+ source")
 	code, err := ctx.RunFile("main.go", source, nil)
+	println("run Go+ source end")
 	if err != nil {
 		log.Fatalln("Failed to run Go+ source:", err, " Code:", code)
 	}
