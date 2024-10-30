@@ -23,7 +23,7 @@ for /f "tokens=2" %%i in ('tasklist ^| findstr python') do taskkill /F /PID %%i
 cd .builds\export
 copy /Y ..\..\index_export.html index.html
 copy /Y ..\..\run.py .
-copy /Y ..\..\test.zip .
+copy /Y ..\..\test_export.zip test.zip
 
 :: Check if port is provided as a command line argument
 if "%~1"=="" (

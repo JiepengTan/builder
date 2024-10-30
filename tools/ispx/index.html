@@ -38,6 +38,25 @@
 	</div>
 	<script src="godot.editor.js"></script>
 	<script>
+		const tabs = [
+			document.getElementById('tab-loader'),
+			document.getElementById('tab-editor'),
+			document.getElementById('tab-game'),
+		];
+		function showTab(name) {
+			tabs.forEach(function (elem) {
+				if (elem.id === `tab-${name}`) {
+					elem.style.display = 'block';
+					if (name === 'editor' || name === 'game') {
+						const canvas = document.getElementById(`${name}-canvas`);
+						canvas.focus();
+					}
+				} else {
+					elem.style.display = 'none';
+				}
+			});
+		}
+
 		window.addEventListener('load', () => {
 			if ('serviceWorker' in navigator) {
 				navigator.serviceWorker.register('service.worker.js').then(function (reg) {
@@ -60,77 +79,65 @@
 				});
 			}
 
-			runGame();
+			InstallProject();
 		});
+
 
 		let editor = null;
 		let game = null;
-		let setStatusMode;
-		let setStatusNotice;
-		let video_driver = '';
-		var editorExitCount = 0
-		const INDETERMINATE_STATUS_STEP_MS = 100;
 		const persistentPaths = ['/home/web_user'];
-		const tabs = [
-			document.getElementById('tab-loader'),
-			document.getElementById('tab-editor'),
-			document.getElementById('tab-game'),
-		];
 
 		let editorCanvas = document.getElementById('editor-canvas');
 		let gameCanvas = document.getElementById('game-canvas');
-
-		let initializing = true;
-		let statusMode = 'hidden';
-		let lastScale = 0;
-		let lastWidth = 0;
-		let lastHeight = 0;
-		let OnEditorExit = function () {
-			showTab('loader');
-		};
-		const editorConfig = {
+		let exitFunc = null
+		let editorConfig = {
 			'unloadAfterInit': false,
 			'canvas': editorCanvas,
 			'canvasResizePolicy': 0,
-			'onExit': function () {
-				editorExitCount++
-				editorCanvas = replaceCanvas(editorCanvas);
-				if (OnEditorExit) {
-					OnEditorExit();
-				}
-				if (editorExitCount == 2) {
-					console.log("Start game")
-					ExecuteGame()
-				}
-			},
-			'onExecute': ImportProject,
 			'persistentPaths': persistentPaths,
+			'onExecute': function (args) {
+				console.log("onExecute  ", args)
+			},
+			'onExit': function () {
+				if (exitFunc) {
+					exitFunc()
+				}
+			}
 		};
-		async function runGame() {
+		async function InstallProject() {
 			const zipResp = fetch('/game.zip')
 			const zipData = await (await (zipResp)).arrayBuffer()
-			console.log("Load data succ 4", zipData)
-			InstallAndRunGame(zipData);
-		};
+			console.log("Load data succ 7", zipData)
+			showTab('status');
+			editor = new Engine(editorConfig);
+			exitFunc = ImportProject
+			editor.init('godot.editor').then(function () {
+				editor.copyToFS('/tmp/preload.zip', zipData);
+				const args = ['--project-manager', '--single-window'];
+				editor.start({ 'args': args, 'persistentDrops': true });
+			});
+		}
 
-		function showTab(name) {
-			tabs.forEach(function (elem) {
-				if (elem.id === `tab-${name}`) {
-					elem.style.display = 'block';
-					if (name === 'editor' || name === 'game') {
-						const canvas = document.getElementById(`${name}-canvas`);
-						canvas.focus();
-					}
-				} else {
-					elem.style.display = 'none';
-				}
+		function ImportProject() {
+			const args = [
+				"--path",
+				"/home/web_user/Preload",
+				"--single-window",
+				"--headless",
+				"--editor",
+				"--quit-after",
+				"30"
+			]
+			console.log("ImportProject ", args)
+			exitFunc = RunGame
+			editor.init().then(function () {
+				editor.start({ 'args': args, 'persistentDrops': false, 'canvas': editorCanvas });
 			});
 		}
 
 
-
-		function ExecuteGame() {
-			args = [
+		function RunGame() {
+			const args = [
 				"--path",
 				"/home/web_user/Preload",
 				"--editor-pid",
@@ -143,73 +150,24 @@
 				'canvas': gameCanvas,
 				'canvasResizePolicy': 1,
 				'onExit': function () {
-					gameCanvas = replaceCanvas(gameCanvas);
-					showTab('editor');
 					game = null;
 				},
 			};
+			console.log("RunGame ", args)
 			if (game) {
 				console.error('A game is already running. Close it first');
 				return;
 			}
-			gameCanvas = replaceCanvas(gameCanvas);
-			game = new Engine(gameConfig);
 			showTab('game');
+			exitFunc = null
+			game = new Engine(gameConfig);
 			game.init('godot.editor').then(function () {
-				requestAnimationFrame(function () {
-					game.start({ 'args': args, 'canvas': gameCanvas }).then(function () {
-						gameCanvas.focus();
-					});
+				game.start({ 'args': args, 'canvas': gameCanvas }).then(function () {
+					gameCanvas.focus();
 				});
 			});
 		}
-		function ImportProject(args) {
-			// import projects
-			console.log("Execute ==== ", args)
-			const is_project_manager = args.filter(function (v) {
-				return v === '--project-manager';
-			}).length !== 0;
-			if (video_driver) {
-				args.push('--rendering-driver', video_driver);
-			}
-			OnEditorExit = function (code) {
-				editor.init().then(function () {
-					OnEditorExit = function () {
-						showTab('loader');
-					};
-					editor.start({ 'args': args, 'persistentDrops': is_project_manager, 'canvas': editorCanvas });
-				});
-				OnEditorExit = null;
-			};
-		}
 
-		function replaceCanvas(from) {
-			const out = document.createElement('canvas');
-			out.id = from.id;
-			out.tabIndex = from.tabIndex;
-			from.parentNode.replaceChild(out, from);
-			lastScale = 0;
-			return out;
-		}
-		function InstallAndRunGame(zip) {
-
-			showTab('status');
-			editor = new Engine(editorConfig);
-			editor.init('godot.editor').then(function () {
-				if (zip) {
-					editor.copyToFS('/tmp/preload.zip', zip);
-				}
-				showTab('editor');
-				const args = ['--project-manager', '--single-window'];
-				if (video_driver) {
-					args.push('--rendering-driver', video_driver);
-				}
-				editor.start({ 'args': args, 'persistentDrops': true }).then(function () {
-					setStatusMode('hidden');
-					initializing = false;
-				});
-			}).catch(null);
-		}
 	</script>
 </body>
 
