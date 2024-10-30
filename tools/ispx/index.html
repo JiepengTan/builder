@@ -120,7 +120,7 @@
 		}
 
 		var editorExitCount = 0
-		function startEditor(zip) {
+		function InstallAndRunGame(zip) {
 			const INDETERMINATE_STATUS_STEP_MS = 100;
 			const persistentPaths = ['/home/web_user'];
 
@@ -129,9 +129,7 @@
 
 			let initializing = true;
 			let statusMode = 'hidden';
-
 			showTab('status');
-
 			let lastScale = 0;
 			let lastWidth = 0;
 			let lastHeight = 0;
@@ -167,8 +165,6 @@
 					"/home/web_user/Preload",
 					"--editor-pid",
 					"0",
-					"--position",
-					"-115,126",
 					"res://main.tscn"
 				]
 				if (game) {
@@ -186,7 +182,8 @@
 					});
 				});
 			}
-			function ExecuteEditor(args) {
+			function ImportProject(args) {
+				// import projects
 				console.log("Execute ==== ", args)
 				const is_project_manager = args.filter(function (v) {
 					return v === '--project-manager';
@@ -195,22 +192,18 @@
 					args.push('--rendering-driver', video_driver);
 				}
 				OnEditorExit = function (code) {
-					setTimeout(function () {
-						editor.init().then(function () {
-							OnEditorExit = function () {
-								showTab('loader');
-							};
-							editor.start({ 'args': args, 'persistentDrops': is_project_manager, 'canvas': editorCanvas });
-						});
-					}, 0);
+					editor.init().then(function () {
+						OnEditorExit = function () {
+							showTab('loader');
+						};
+						editor.start({ 'args': args, 'persistentDrops': is_project_manager, 'canvas': editorCanvas });
+					});
 					OnEditorExit = null;
 				};
 			}
 
 			const editorConfig = {
 				'unloadAfterInit': false,
-				'onProgress': function progressFunction(current, total) {
-				},
 				'canvas': editorCanvas,
 				'canvasResizePolicy': 0,
 				'onExit': function () {
@@ -224,11 +217,10 @@
 						ExecuteGame()
 					}
 				},
-				'onExecute': ExecuteEditor,
+				'onExecute': ImportProject,
 				'persistentPaths': persistentPaths,
 			};
 			editor = new Engine(editorConfig);
-
 			function displayFailureNotice(err) {
 				const msg = err.message || err;
 				console.error(msg);
@@ -260,46 +252,11 @@
 				}).catch(displayFailureNotice);
 			}
 		}
-
-		function preloadZip(target) {
-			return new Promise(function (resolve, reject) {
-				if (target.files.length > 0) {
-					target.files[0].arrayBuffer().then(function (data) {
-						resolve(data);
-					});
-				} else {
-					resolve();
-				}
-			});
-		}
-
-		function downloadAndSaveFile(url, savePath) {
-			return new Promise(function (resolve, reject) {
-				fetch(url)
-					.then(response => {
-						if (!response.ok) {
-							throw new Error('Network response was not ok');
-						}
-						return response.arrayBuffer();
-					})
-					.then(data => {
-						resolve(data);
-					})
-					.catch(error => {
-						console.error('Error downloading file:', error);
-						reject(error);
-					});
-			});
-		}
-		function runGame() {
-			const url = 'http://127.0.0.1:8005/game.zip'; // TODO replace it to the real URL
-			const savePath = '/tmp/preload.zip';
-			downloadAndSaveFile(url, savePath).then(function (zipData) {
-				console.log('File downloaded and saved successfully', zipData);
-				startEditor(zipData);
-			}).catch(function (error) {
-				console.error('Failed to download and save the file:', error);
-			});
+		async function runGame() {
+			const zipResp = fetch('/game.zip')
+			const zipData = await (await (zipResp)).arrayBuffer()
+			console.log("Load data succ ", zipData)
+			InstallAndRunGame(zipData);
 		};
 	</script>
 </body>
