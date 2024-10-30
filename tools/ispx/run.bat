@@ -1,7 +1,7 @@
 @echo off
 rd /s /q .builds
 if not exist .builds mkdir .builds
-copy ..\..\..\spx\tutorial\00-Hello\.builds\web\* .builds
+copy ..\..\..\spx\tutorial\05-Animation\.builds\web\* .builds
 del .builds\gdspx.wasm
 
 if not exist .builds mkdir .builds
