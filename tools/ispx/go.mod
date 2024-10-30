@@ -6,7 +6,7 @@ require (
 	github.com/goplus/igop v0.27.1
 	github.com/goplus/reflectx v1.2.2
 	github.com/goplus/spx v0.0.0
-	github.com/realdream-ai/gdspx v0.0.0-20241028072423-3577d7e1307f
+	github.com/realdream-ai/gdspx v0.0.0
 )
 
 require (
@@ -29,7 +29,8 @@ require (
 )
 
 replace (
-	github.com/goplus/spx => github.com/JiepengTan/spx v0.0.0-20241028081720-f6ad3c51a443
+	github.com/goplus/spx => ../../../spx
+	github.com/realdream-ai/gdspx => ../../../
 	github.com/srwiley/oksvg => github.com/qiniu/oksvg v0.2.0-no-charset
 	golang.org/x/image => golang.org/x/image v0.0.0-20210628002857-a66eb6448b8d
 	golang.org/x/mobile => golang.org/x/mobile v0.0.0-20210902104108-5d9a33257ab5
