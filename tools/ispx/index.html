@@ -5,7 +5,7 @@
 	<meta charset="utf-8">
 	<meta name="viewport"
 		content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
-	<title>Godot Engine Web Editor (4.2.2.stable.custom_build)</title>
+	<title>Go+ Builder</title>
 	<style>
 		*:focus {
 			outline: none;
@@ -57,6 +57,14 @@
 			});
 		}
 
+		function clearPersistence(targetPath) {
+			const req = indexedDB.deleteDatabase(targetPath);
+			req.onerror = function (err) {
+				alert('Error deleting local files. Please retry after reloading the page.');
+			};
+			console.log("clear persistence cache", targetPath)
+		}
+
 		window.addEventListener('load', () => {
 			if ('serviceWorker' in navigator) {
 				navigator.serviceWorker.register('service.worker.js').then(function (reg) {
@@ -85,7 +93,12 @@
 
 		let editor = null;
 		let game = null;
-		const persistentPaths = ['/home/web_user'];
+		let projectZip = '/game.zip'
+		let persistentPath = '/home/web_user'
+		let tempZipPath = '/tmp/preload.zip'
+		let projectInstallName = "Game"
+		let zipData = null;
+		const persistentPaths = [persistentPath];
 
 		let editorCanvas = document.getElementById('editor-canvas');
 		let gameCanvas = document.getElementById('game-canvas');
@@ -104,16 +117,24 @@
 				}
 			}
 		};
+		async function downloadProjectData() {
+			if (zipData != null) {
+				return
+			}
+			const zipResp = fetch(projectZip)
+			zipData = await (await (zipResp)).arrayBuffer()
+			console.log("Load data succ", zipData)
+		}
+
 		async function InstallProject() {
-			const zipResp = fetch('/game.zip')
-			const zipData = await (await (zipResp)).arrayBuffer()
-			console.log("Load data succ 7", zipData)
+			clearPersistence(tempZipPath)
+			downloadProjectData()
 			showTab('status');
 			editor = new Engine(editorConfig);
 			exitFunc = ImportProject
 			editor.init('godot.editor').then(function () {
-				editor.copyToFS('/tmp/preload.zip', zipData);
-				const args = ['--project-manager', '--single-window'];
+				editor.copyToFS(tempZipPath, zipData);
+				const args = ['--project-manager', '--single-window', "--install_project_name", projectInstallName];
 				editor.start({ 'args': args, 'persistentDrops': true });
 			});
 		}
@@ -121,7 +142,7 @@
 		function ImportProject() {
 			const args = [
 				"--path",
-				"/home/web_user/Preload",
+				persistentPath + "/" + projectInstallName,
 				"--single-window",
 				"--headless",
 				"--editor",
@@ -136,10 +157,11 @@
 		}
 
 
+
 		function RunGame() {
 			const args = [
 				"--path",
-				"/home/web_user/Preload",
+				persistentPath + "/" + projectInstallName,
 				"--editor-pid",
 				"0",
 				"res://main.tscn"
@@ -164,10 +186,8 @@
 			game.init('godot.editor').then(function () {
 				game.start({ 'args': args, 'canvas': gameCanvas }).then(async () => {
 					gameCanvas.focus();
-					const zipResp = fetch('/test.zip')
-					const buffer = await (await (zipResp)).arrayBuffer()
-					console.log("Load Game data3", buffer)
-					window.goLoadData(new Uint8Array(buffer))
+					downloadProjectData()
+					window.goLoadData(new Uint8Array(zipData))
 				});
 			});
 		}

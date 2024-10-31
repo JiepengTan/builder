@@ -1,10 +1,15 @@
 @echo off
-:: Check if the export directory exists and delete it if so
+
+:: Set the target directory
+set targetDir=..\..\..\spx\tutorial\08-CacheMode
+set curDir=%cd%
+cd %targetDir%
+spx exporti .
+cd %curDir%
+
 if exist .builds\editor rd /s /q .builds\editor
 mkdir .builds\editor
-
-:: Copy files from the source directory to the export directory
-copy /Y ..\..\..\spx\tutorial\08-CacheMode\.builds\web\* .builds\editor
+copy /Y "%targetDir%\.builds\web\*" .builds\editor
 del /Q .builds\editor\gdspx.wasm
 
 :: Set up environment variables for Go build
@@ -23,7 +28,6 @@ for /f "tokens=2" %%i in ('tasklist ^| findstr python') do taskkill /F /PID %%i
 cd .builds\editor
 copy /Y ..\..\index.html .
 copy /Y ..\..\run.py .
-copy /Y ..\..\test.zip .
 
 :: Check if port is provided as a command line argument
 if "%~1"=="" (
